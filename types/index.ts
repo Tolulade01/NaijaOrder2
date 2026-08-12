@@ -1,0 +1,5 @@
+export type OrderStatus='New'|'Awaiting Payment'|'Paid'|'Processing'|'Ready'|'Shipped'|'Delivered'|'Cancelled';export type PaymentStatus='Unpaid'|'Partial'|'Paid';export type PaymentMethod='Bank Transfer'|'Cash'|'POS'|'Other';
+export type Customer={id:string;business_id:string;name:string;phone?:string;whatsapp_number?:string;email?:string;address?:string;city?:string;state?:string;notes?:string;created_at:string;updated_at:string};
+export type Product={id:string;business_id:string;name:string;description?:string;sku?:string;price:number;image_url?:string;active:boolean;stock_quantity?:number;created_at:string;updated_at:string};
+export type Order={id:string;business_id:string;customer_id:string;order_number:string;status:OrderStatus;subtotal:number;delivery_fee:number;discount:number;total:number;payment_status:PaymentStatus;payment_method:PaymentMethod;notes?:string;created_at:string;updated_at:string;customers?:Customer};
+export type OrderItem={id:string;order_id:string;product_id:string;product_name:string;quantity:number;unit_price:number;total_price:number};

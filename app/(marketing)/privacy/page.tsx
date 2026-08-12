@@ -1,0 +1,1 @@
+export default function Page(){return <section className="mx-auto max-w-3xl px-4 py-16"><h1 className="text-4xl font-black capitalize text-emerald-950">privacy</h1><p className="mt-4 text-lg">NaijaOrder V1 is a mobile-first SaaS for Nigerian small businesses. Pricing is Free during early access; no subscription billing is implemented in V1.</p></section>}

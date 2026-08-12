@@ -1,0 +1,5 @@
+import { z } from 'zod';
+const phone=z.string().min(7,'Enter a valid phone number').optional().or(z.literal(''));
+export const customerSchema=z.object({name:z.string().min(2),phone,whatsapp_number:phone,email:z.string().email().optional().or(z.literal('')),address:z.string().optional(),city:z.string().optional(),state:z.string().optional(),notes:z.string().optional()});
+export const productSchema=z.object({name:z.string().min(2),description:z.string().optional(),sku:z.string().optional(),price:z.coerce.number().nonnegative(),image_url:z.string().url().optional().or(z.literal('')),active:z.coerce.boolean().default(true),stock_quantity:z.coerce.number().int().nonnegative().optional()});
+export const businessSchema=z.object({name:z.string().min(2),category:z.string().optional(),phone,whatsapp_number:phone,email:z.string().email().optional().or(z.literal('')),address:z.string().optional(),state:z.string().optional(),city:z.string().optional(),logo_url:z.string().url().optional().or(z.literal('')),currency:z.string().default('NGN')});
