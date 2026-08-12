@@ -77,7 +77,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             <option key={method}>{method}</option>
           ))}
         </select>
-        <textarea className="input" name="notes" defaultValue={order.notes} />
+        <textarea className="input" name="notes" defaultValue={order.notes ?? ''} />
         <button className="btn btn-secondary">Update Status / Payment</button>
       </form>
     </div>

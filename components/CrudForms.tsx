@@ -3,8 +3,10 @@ import type { Customer, Product } from '@/types';
 
 type CustomerFormData = Partial<Customer>;
 type ProductFormData = Partial<Product>;
+type CustomerTextField = Extract<keyof CustomerFormData, 'name' | 'phone' | 'whatsapp_number' | 'email' | 'address' | 'city' | 'state' | 'notes'>;
+type ProductInputField = Extract<keyof ProductFormData, 'name' | 'description' | 'sku' | 'price' | 'image_url' | 'stock_quantity'>;
 
-const customerFields: Array<{ name: keyof CustomerFormData; label: string; required?: boolean }> = [
+const customerFields: Array<{ name: CustomerTextField; label: string; required?: boolean }> = [
   { name: 'name', label: 'Name', required: true },
   { name: 'phone', label: 'Phone' },
   { name: 'whatsapp_number', label: 'WhatsApp number' },
@@ -15,7 +17,7 @@ const customerFields: Array<{ name: keyof CustomerFormData; label: string; requi
   { name: 'notes', label: 'Notes' },
 ];
 
-const productFields: Array<{ name: keyof ProductFormData; label: string; type?: string; required?: boolean }> = [
+const productFields: Array<{ name: ProductInputField; label: string; type?: string; required?: boolean }> = [
   { name: 'name', label: 'Name', required: true },
   { name: 'description', label: 'Description' },
   { name: 'sku', label: 'SKU' },
@@ -24,6 +26,10 @@ const productFields: Array<{ name: keyof ProductFormData; label: string; type?: 
   { name: 'stock_quantity', label: 'Stock quantity', type: 'number' },
 ];
 
+function inputValue(value: string | number | null | undefined) {
+  return value ?? '';
+}
+
 export function CustomerForm({ c = {} }: { c?: CustomerFormData }) {
   return (
     <form action={saveCustomer} className="card space-y-3 p-4">
@@ -31,7 +37,7 @@ export function CustomerForm({ c = {} }: { c?: CustomerFormData }) {
       {customerFields.map((field) => (
         <label className="label" key={field.name}>
           {field.label}
-          <input className="input" name={field.name} required={field.required} defaultValue={c[field.name] ?? ''} />
+          <input className="input" name={field.name} required={field.required} defaultValue={inputValue(c[field.name])} />
         </label>
       ))}
       <button className="btn btn-primary">Save Customer</button>
@@ -52,7 +58,7 @@ export function ProductForm({ p = { active: true } }: { p?: ProductFormData }) {
             type={field.type ?? 'text'}
             step={field.type === 'number' ? '0.01' : undefined}
             required={field.required}
-            defaultValue={p[field.name] ?? ''}
+            defaultValue={inputValue(p[field.name])}
           />
         </label>
       ))}
