@@ -6,6 +6,7 @@ import { getBusiness, nextOrderNumber } from '@/lib/supabase/data';
 import type { Product } from '@/types';
 
 const val = (form: FormData, key: string) => String(form.get(key) || '');
+const msg = (value: string) => encodeURIComponent(value);
 
 export async function saveCustomer(form: FormData) {
   const { supabase, business } = await getBusiness();
@@ -21,19 +22,26 @@ export async function saveCustomer(form: FormData) {
     state: val(form, 'state'),
     notes: val(form, 'notes'),
   };
-  if (id) {
-    await supabase.from('customers').update(row).eq('id', id).eq('business_id', business.id);
-  } else {
-    await supabase.from('customers').insert(row);
+
+  const result = id
+    ? await supabase.from('customers').update(row).eq('id', id).eq('business_id', business.id)
+    : await supabase.from('customers').insert(row);
+
+  if (result.error) {
+    redirect(`/app/customers${id ? `/${id}` : ''}?error=${msg(result.error.message)}`);
   }
+
   revalidatePath('/app/customers');
-  redirect('/app/customers');
+  redirect(`/app/customers?success=${msg(id ? 'Customer updated successfully.' : 'Customer added successfully.')}`);
 }
 
 export async function deleteCustomer(form: FormData) {
   const { supabase, business } = await getBusiness();
-  await supabase.from('customers').delete().eq('id', val(form, 'id')).eq('business_id', business.id);
-  redirect('/app/customers');
+  const id = val(form, 'id');
+  const { error } = await supabase.from('customers').delete().eq('id', id).eq('business_id', business.id);
+  if (error) redirect(`/app/customers?error=${msg(error.message)}`);
+  revalidatePath('/app/customers');
+  redirect(`/app/customers?success=${msg('Customer deleted successfully.')}`);
 }
 
 export async function saveProduct(form: FormData) {
@@ -49,12 +57,14 @@ export async function saveProduct(form: FormData) {
     active: form.get('active') === 'on',
     stock_quantity: Number(val(form, 'stock_quantity') || 0),
   };
-  if (id) {
-    await supabase.from('products').update(row).eq('id', id).eq('business_id', business.id);
-  } else {
-    await supabase.from('products').insert(row);
-  }
-  redirect('/app/products');
+
+  const result = id
+    ? await supabase.from('products').update(row).eq('id', id).eq('business_id', business.id)
+    : await supabase.from('products').insert(row);
+
+  if (result.error) redirect(`/app/products${id ? `/${id}` : ''}?error=${msg(result.error.message)}`);
+  revalidatePath('/app/products');
+  redirect(`/app/products?success=${msg(id ? 'Product updated successfully.' : 'Product added successfully.')}`);
 }
 
 export async function createOrder(form: FormData) {
@@ -73,9 +83,7 @@ export async function createOrder(form: FormData) {
       .select('id')
       .single<{ id: string }>();
 
-    if (error || !customer) {
-      throw new Error('Unable to create customer for this order.');
-    }
+    if (error || !customer) throw new Error(error?.message || 'Unable to create customer for this order.');
     customerId = customer.id;
   }
 
@@ -98,26 +106,16 @@ export async function createOrder(form: FormData) {
       .eq('business_id', business.id)
       .single<Product>();
 
-    if (error || !product) {
-      throw new Error('One or more selected products could not be found.');
-    }
+    if (error || !product) throw new Error(error?.message || 'One or more selected products could not be found.');
 
     const quantity = quantities[index] || 1;
     const unitPrice = Number(product.price);
     const totalPrice = unitPrice * quantity;
     subtotal += totalPrice;
-    items.push({
-      product_id: product.id,
-      product_name: product.name,
-      quantity,
-      unit_price: unitPrice,
-      total_price: totalPrice,
-    });
+    items.push({ product_id: product.id, product_name: product.name, quantity, unit_price: unitPrice, total_price: totalPrice });
   }
 
-  if (!items.length) {
-    throw new Error('Add at least one product to create an order.');
-  }
+  if (!items.length) throw new Error('Add at least one product to create an order.');
 
   const deliveryFee = Number(val(form, 'delivery_fee') || 0);
   const discount = Number(val(form, 'discount') || 0);
@@ -140,17 +138,18 @@ export async function createOrder(form: FormData) {
     .select('id')
     .single<{ id: string }>();
 
-  if (error || !order) {
-    throw new Error('Unable to create order.');
-  }
+  if (error || !order) throw new Error(error?.message || 'Unable to create order.');
 
-  await supabase.from('order_items').insert(items.map((item) => ({ ...item, order_id: order.id })));
-  redirect(`/app/orders/${order.id}`);
+  const { error: itemError } = await supabase.from('order_items').insert(items.map((item) => ({ ...item, order_id: order.id })));
+  if (itemError) throw new Error(itemError.message);
+
+  redirect(`/app/orders/${order.id}?success=${msg('Order created successfully.')}`);
 }
 
 export async function updateOrder(form: FormData) {
   const { supabase, business } = await getBusiness();
-  await supabase
+  const id = val(form, 'id');
+  const { data, error } = await supabase
     .from('orders')
     .update({
       status: val(form, 'status'),
@@ -158,14 +157,24 @@ export async function updateOrder(form: FormData) {
       payment_method: val(form, 'payment_method'),
       notes: val(form, 'notes'),
     })
-    .eq('id', val(form, 'id'))
-    .eq('business_id', business.id);
-  revalidatePath(`/app/orders/${val(form, 'id')}`);
+    .eq('id', id)
+    .eq('business_id', business.id)
+    .select('id')
+    .maybeSingle<{ id: string }>();
+
+  if (error || !data) {
+    redirect(`/app/orders/${id}?error=${msg(error?.message || 'Order could not be updated. Please try again.')}`);
+  }
+
+  revalidatePath(`/app/orders/${id}`);
+  revalidatePath('/app/orders');
+  revalidatePath('/app/dashboard');
+  redirect(`/app/orders/${id}?success=${msg('Order updated successfully.')}`);
 }
 
 export async function saveSettings(form: FormData) {
   const { supabase, business, user } = await getBusiness();
-  await supabase
+  const { error: businessError } = await supabase
     .from('businesses')
     .update({
       name: val(form, 'name'),
@@ -180,6 +189,13 @@ export async function saveSettings(form: FormData) {
       currency: 'NGN',
     })
     .eq('id', business.id);
-  await supabase.from('profiles').upsert({ user_id: user.id, full_name: val(form, 'full_name') });
+
+  if (businessError) redirect(`/app/settings?error=${msg(businessError.message)}`);
+
+  const { error: profileError } = await supabase.from('profiles').upsert({ user_id: user.id, full_name: val(form, 'full_name') });
+  if (profileError) redirect(`/app/settings?error=${msg(profileError.message)}`);
+
   revalidatePath('/app/settings');
+  revalidatePath('/app/dashboard');
+  redirect(`/app/settings?success=${msg('Settings saved successfully.')}`);
 }
