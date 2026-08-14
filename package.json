@@ -7,7 +7,7 @@
   "dependencies": {
     "@supabase/supabase-js": "latest",
     "lucide-react": "latest",
-    "next": "15.4.6",
+    "next": "15.5.21",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "zod": "latest"
@@ -17,6 +17,7 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "tailwindcss": "^4",
+    "eslint": "^9.0.0",
     "typescript": "^5.6.3"
   }
 }
