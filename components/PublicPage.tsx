@@ -12,8 +12,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
           <Link href="/pricing">Pricing</Link>
           <Link href="/about">About</Link>
           <Link href="/contact">Contact</Link>
-          <Link href="/login">Login</Link>
-        </nav>
+          </nav>
 
         <div className="flex items-center gap-3">
           <Link className="hidden font-semibold md:inline" href="/login">
