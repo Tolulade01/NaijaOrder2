@@ -1,4 +1,7 @@
+'use client';
+
 import { saveCustomer, saveProduct } from '@/app/app/actions';
+import { FormSubmitButton } from '@/components/FormSubmitButton';
 import type { Customer, Product } from '@/types';
 
 type CustomerFormData = Partial<Customer>;
@@ -40,7 +43,7 @@ export function CustomerForm({ c = {} }: { c?: CustomerFormData }) {
           <input className="input" name={field.name} required={field.required} defaultValue={inputValue(c[field.name])} />
         </label>
       ))}
-      <button className="btn btn-primary">Save Customer</button>
+      <FormSubmitButton pendingLabel="Saving Customer...">Save Customer</FormSubmitButton>
     </form>
   );
 }
@@ -65,7 +68,7 @@ export function ProductForm({ p = { active: true } }: { p?: ProductFormData }) {
       <label className="flex gap-2">
         <input name="active" type="checkbox" defaultChecked={p.active ?? true} /> Active
       </label>
-      <button className="btn btn-primary">Save Product</button>
+      <FormSubmitButton pendingLabel="Saving Product...">Save Product</FormSubmitButton>
     </form>
   );
 }
