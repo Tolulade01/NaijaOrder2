@@ -27,9 +27,7 @@ export async function saveCustomer(form: FormData) {
     ? await supabase.from('customers').update(row).eq('id', id).eq('business_id', business.id)
     : await supabase.from('customers').insert(row);
 
-  if (result.error) {
-    redirect(`/app/customers${id ? `/${id}` : ''}?error=${msg(result.error.message)}`);
-  }
+  if (result.error) redirect(`/app/customers${id ? `/${id}` : ''}?error=${msg(result.error.message)}`);
 
   revalidatePath('/app/customers');
   redirect(`/app/customers?success=${msg(id ? 'Customer updated successfully.' : 'Customer added successfully.')}`);
@@ -69,81 +67,88 @@ export async function saveProduct(form: FormData) {
 
 export async function createOrder(form: FormData) {
   const { supabase, business } = await getBusiness();
-  let customerId = val(form, 'customer_id');
 
-  if (!customerId) {
-    const { data: customer, error } = await supabase
-      .from('customers')
+  try {
+    let customerId = val(form, 'customer_id');
+
+    if (!customerId) {
+      const { data: customer, error } = await supabase
+        .from('customers')
+        .insert({
+          business_id: business.id,
+          name: val(form, 'customer_name'),
+          phone: val(form, 'customer_phone'),
+          whatsapp_number: val(form, 'customer_phone'),
+        })
+        .select('id')
+        .single<{ id: string }>();
+
+      if (error || !customer) throw new Error(error?.message || 'Unable to create customer for this order.');
+      customerId = customer.id;
+    }
+
+    const productIds = form.getAll('product_id').map(String).filter(Boolean);
+    const quantities = form.getAll('quantity').map((quantity) => Number(quantity) || 1);
+    let subtotal = 0;
+    const items: Array<{
+      product_id: string;
+      product_name: string;
+      quantity: number;
+      unit_price: number;
+      total_price: number;
+    }> = [];
+
+    for (let index = 0; index < productIds.length; index += 1) {
+      const { data: product, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', productIds[index])
+        .eq('business_id', business.id)
+        .single<Product>();
+
+      if (error || !product) throw new Error(error?.message || 'One or more selected products could not be found.');
+
+      const quantity = quantities[index] || 1;
+      const unitPrice = Number(product.price);
+      const totalPrice = unitPrice * quantity;
+      subtotal += totalPrice;
+      items.push({ product_id: product.id, product_name: product.name, quantity, unit_price: unitPrice, total_price: totalPrice });
+    }
+
+    if (!items.length) throw new Error('Add at least one product to create an order.');
+
+    const deliveryFee = Number(val(form, 'delivery_fee') || 0);
+    const discount = Number(val(form, 'discount') || 0);
+    const total = subtotal + deliveryFee - discount;
+    const { data: order, error } = await supabase
+      .from('orders')
       .insert({
         business_id: business.id,
-        name: val(form, 'customer_name'),
-        phone: val(form, 'customer_phone'),
-        whatsapp_number: val(form, 'customer_phone'),
+        customer_id: customerId,
+        order_number: await nextOrderNumber(supabase, business.id),
+        status: val(form, 'status') || 'New',
+        subtotal,
+        delivery_fee: deliveryFee,
+        discount,
+        total,
+        payment_status: val(form, 'payment_status') || 'Unpaid',
+        payment_method: val(form, 'payment_method') || 'Bank Transfer',
+        notes: val(form, 'notes'),
       })
       .select('id')
       .single<{ id: string }>();
 
-    if (error || !customer) throw new Error(error?.message || 'Unable to create customer for this order.');
-    customerId = customer.id;
+    if (error || !order) throw new Error(error?.message || 'Unable to create order.');
+
+    const { error: itemError } = await supabase.from('order_items').insert(items.map((item) => ({ ...item, order_id: order.id })));
+    if (itemError) throw new Error(itemError.message);
+
+    revalidatePath('/app/orders');
+    revalidatePath('/app/dashboard');
+    redirect(`/app/orders/${order.id}?success=${msg('Order created successfully.')}`);
+  } catch (error) {
+    redirect(`/app/orders/new?error=${msg(error instanceof Error ? error.message : 'Unable to create order. Please try again.')}`);
   }
-
-  const productIds = form.getAll('product_id').map(String).filter(Boolean);
-  const quantities = form.getAll('quantity').map((quantity) => Number(quantity) || 1);
-  let subtotal = 0;
-  const items: Array<{
-    product_id: string;
-    product_name: string;
-    quantity: number;
-    unit_price: number;
-    total_price: number;
-  }> = [];
-
-  for (let index = 0; index < productIds.length; index += 1) {
-    const { data: product, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('id', productIds[index])
-      .eq('business_id', business.id)
-      .single<Product>();
-
-    if (error || !product) throw new Error(error?.message || 'One or more selected products could not be found.');
-
-    const quantity = quantities[index] || 1;
-    const unitPrice = Number(product.price);
-    const totalPrice = unitPrice * quantity;
-    subtotal += totalPrice;
-    items.push({ product_id: product.id, product_name: product.name, quantity, unit_price: unitPrice, total_price: totalPrice });
-  }
-
-  if (!items.length) throw new Error('Add at least one product to create an order.');
-
-  const deliveryFee = Number(val(form, 'delivery_fee') || 0);
-  const discount = Number(val(form, 'discount') || 0);
-  const total = subtotal + deliveryFee - discount;
-  const { data: order, error } = await supabase
-    .from('orders')
-    .insert({
-      business_id: business.id,
-      customer_id: customerId,
-      order_number: await nextOrderNumber(supabase, business.id),
-      status: val(form, 'status') || 'New',
-      subtotal,
-      delivery_fee: deliveryFee,
-      discount,
-      total,
-      payment_status: val(form, 'payment_status') || 'Unpaid',
-      payment_method: val(form, 'payment_method') || 'Bank Transfer',
-      notes: val(form, 'notes'),
-    })
-    .select('id')
-    .single<{ id: string }>();
-
-  if (error || !order) throw new Error(error?.message || 'Unable to create order.');
-
-  const { error: itemError } = await supabase.from('order_items').insert(items.map((item) => ({ ...item, order_id: order.id })));
-  if (itemError) throw new Error(itemError.message);
-
-  redirect(`/app/orders/${order.id}?success=${msg('Order created successfully.')}`);
 }
 
 export async function updateOrder(form: FormData) {
@@ -192,7 +197,12 @@ export async function saveSettings(form: FormData) {
 
   if (businessError) redirect(`/app/settings?error=${msg(businessError.message)}`);
 
-  const { error: profileError } = await supabase.from('profiles').upsert({ user_id: user.id, full_name: val(form, 'full_name') });
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .upsert(
+      { user_id: user.id, full_name: val(form, 'full_name') },
+      { onConflict: 'user_id' },
+    );
   if (profileError) redirect(`/app/settings?error=${msg(profileError.message)}`);
 
   revalidatePath('/app/settings');
