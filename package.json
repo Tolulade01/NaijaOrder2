@@ -5,6 +5,7 @@
     "lint": "echo \"Linting is disabled for the V1 deployment build\""
   },
   "dependencies": {
+    "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "lucide-react": "latest",
     "next": "15.5.21",
