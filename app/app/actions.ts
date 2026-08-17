@@ -78,7 +78,6 @@ export async function createOrder(form: FormData) {
     const productIds = form.getAll('product_id').map(String).map((value) => value.trim()).filter(Boolean);
     const quantities = form.getAll('quantity').map((quantity) => Number(quantity));
 
-    // Validate the order before creating any customer or database records.
     if (!existingCustomerId && !newCustomerName) {
       throw new Error('Enter a customer name or select an existing customer.');
     }
@@ -198,16 +197,7 @@ export async function createOrder(form: FormData) {
     if (itemError) {
       throw new Error(itemError.message);
     }
-
-    revalidatePath('/app/orders');
-    revalidatePath('/app/dashboard');
-
-    // redirect() intentionally stays outside the catch block below because
-    // Next.js implements redirect by throwing a special NEXT_REDIRECT signal.
-    redirect(`/app/orders/${order.id}?success=${msg('Order created successfully.')}`);
   } catch (error) {
-    // Clean up records created during a failed order so a failed submission
-    // cannot leave behind an empty order or duplicate new customer.
     if (createdOrderId) {
       await supabase.from('order_items').delete().eq('order_id', createdOrderId);
       await supabase.from('orders').delete().eq('id', createdOrderId).eq('business_id', business.id);
@@ -220,6 +210,13 @@ export async function createOrder(form: FormData) {
     const errorMessage = error instanceof Error ? error.message : 'Unable to create order. Please try again.';
     redirect(`/app/orders/new?error=${msg(errorMessage)}`);
   }
+
+  // IMPORTANT: redirect() is outside the try/catch. Next.js implements
+  // redirect by throwing a special NEXT_REDIRECT signal, so catching it
+  // would incorrectly turn a successful order into an error message.
+  revalidatePath('/app/orders');
+  revalidatePath('/app/dashboard');
+  redirect(`/app/orders?success=${msg('Order created successfully.')}`);
 }
 
 export async function updateOrder(form: FormData) {
@@ -246,6 +243,34 @@ export async function updateOrder(form: FormData) {
   revalidatePath('/app/orders');
   revalidatePath('/app/dashboard');
   redirect(`/app/orders/${id}?success=${msg('Order updated successfully.')}`);
+}
+
+export async function deleteOrder(form: FormData) {
+  const { supabase, business } = await getBusiness();
+  const id = val(form, 'id');
+
+  if (!id) {
+    redirect(`/app/orders?error=${msg('Order ID is missing.')}`);
+  }
+
+  const { error: itemError } = await supabase.from('order_items').delete().eq('order_id', id);
+  if (itemError) {
+    redirect(`/app/orders/${id}?error=${msg(itemError.message)}`);
+  }
+
+  const { error: orderError } = await supabase
+    .from('orders')
+    .delete()
+    .eq('id', id)
+    .eq('business_id', business.id);
+
+  if (orderError) {
+    redirect(`/app/orders/${id}?error=${msg(orderError.message)}`);
+  }
+
+  revalidatePath('/app/orders');
+  revalidatePath('/app/dashboard');
+  redirect(`/app/orders?success=${msg('Order deleted successfully.')}`);
 }
 
 export async function saveSettings(form: FormData) {
