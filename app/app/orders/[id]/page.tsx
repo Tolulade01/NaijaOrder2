@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
 import { getBusiness } from '@/lib/supabase/data';
-import { updateOrder } from '../../actions';
 import { formatDate, formatNaira } from '@/lib/utils/format';
 import { createWhatsAppLink, orderMessage } from '@/lib/whatsapp';
+import OrderUpdateForm from '@/components/OrderUpdateForm';
 import type { Customer, Order, OrderItem } from '@/types';
 
 type OrderWithCustomer = Order & { customers: Customer };
@@ -60,26 +60,13 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         <p>Discount: {formatNaira(Number(order.discount))}</p>
         <b>Total: {formatNaira(Number(order.total))}</b>
       </section>
-      <form action={updateOrder} className="card space-y-3 p-4">
-        <input type="hidden" name="id" value={id} />
-        <select className="input" name="status" defaultValue={order.status}>
-          {['New', 'Awaiting Payment', 'Paid', 'Processing', 'Ready', 'Shipped', 'Delivered', 'Cancelled'].map((status) => (
-            <option key={status}>{status}</option>
-          ))}
-        </select>
-        <select className="input" name="payment_status" defaultValue={order.payment_status}>
-          {['Unpaid', 'Partial', 'Paid'].map((status) => (
-            <option key={status}>{status}</option>
-          ))}
-        </select>
-        <select className="input" name="payment_method" defaultValue={order.payment_method}>
-          {['Bank Transfer', 'Cash', 'POS', 'Other'].map((method) => (
-            <option key={method}>{method}</option>
-          ))}
-        </select>
-        <textarea className="input" name="notes" defaultValue={order.notes ?? ''} />
-        <button className="btn btn-secondary">Update Status / Payment</button>
-      </form>
+      <OrderUpdateForm
+        id={id}
+        status={order.status}
+        paymentStatus={order.payment_status}
+        paymentMethod={order.payment_method}
+        notes={order.notes ?? ''}
+      />
     </div>
   );
 }
