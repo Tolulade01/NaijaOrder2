@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getBusiness } from '@/lib/supabase/data';
 import { formatDate, formatNaira } from '@/lib/utils/format';
@@ -26,23 +27,50 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
   const order = orderResult.data;
   const items = itemsResult.data ?? [];
+  const customerPhone = order.customers.whatsapp_number || order.customers.phone || '';
   const wa = createWhatsAppLink(
-    order.customers.whatsapp_number || order.customers.phone || '',
-    orderMessage(order.customers.name, order.order_number, formatNaira(Number(order.total)), order.payment_status),
+    customerPhone,
+    orderMessage(
+      order.customers.name,
+      order.order_number,
+      formatNaira(Number(order.total)),
+      order.payment_status,
+    ),
   );
 
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-black">{order.order_number}</h1>
-      <p>
-        {order.customers.name} · {formatDate(order.created_at)}
-      </p>
-      {wa && (
-        <a className="btn btn-primary" href={wa}>
-          Send on WhatsApp
-        </a>
-      )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-black">{order.order_number}</h1>
+          <p>
+            {order.customers.name} · {formatDate(order.created_at)}
+          </p>
+          {customerPhone && <p className="text-sm text-gray-500">Customer phone: {customerPhone}</p>}
+        </div>
+
+        {wa ? (
+          <a
+            className="btn btn-primary"
+            href={wa}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Send on WhatsApp
+          </a>
+        ) : (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <p className="font-semibold">WhatsApp unavailable</p>
+            <p>No phone number is saved for this customer.</p>
+            <Link className="mt-1 inline-block font-semibold underline" href={`/app/customers/${order.customers.id}`}>
+              Add customer phone
+            </Link>
+          </div>
+        )}
+      </div>
+
       <section className="card p-4">
+        <h2 className="mb-3 text-xl font-bold">Order Summary</h2>
         {items.length ? (
           items.map((item) => (
             <p className="flex justify-between border-b py-2" key={item.id}>
@@ -55,11 +83,14 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         ) : (
           <p className="text-sm text-gray-500">No line items found for this order.</p>
         )}
-        <p>Subtotal: {formatNaira(Number(order.subtotal))}</p>
-        <p>Delivery: {formatNaira(Number(order.delivery_fee))}</p>
-        <p>Discount: {formatNaira(Number(order.discount))}</p>
-        <b>Total: {formatNaira(Number(order.total))}</b>
+        <div className="mt-3 space-y-1">
+          <p>Subtotal: {formatNaira(Number(order.subtotal))}</p>
+          <p>Delivery: {formatNaira(Number(order.delivery_fee))}</p>
+          <p>Discount: {formatNaira(Number(order.discount))}</p>
+          <p className="text-lg font-black">Total: {formatNaira(Number(order.total))}</p>
+        </div>
       </section>
+
       <OrderUpdateForm
         id={id}
         status={order.status}
