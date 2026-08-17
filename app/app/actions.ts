@@ -65,6 +65,30 @@ export async function saveProduct(form: FormData) {
   redirect(`/app/products?success=${msg(id ? 'Product updated successfully.' : 'Product added successfully.')}`);
 }
 
+export async function deleteProduct(form: FormData) {
+  const { supabase, business } = await getBusiness();
+  const id = val(form, 'id');
+
+  if (!id) {
+    redirect(`/app/products?error=${msg('Product ID is missing.')}`);
+  }
+
+  const { error } = await supabase
+    .from('products')
+    .delete()
+    .eq('id', id)
+    .eq('business_id', business.id);
+
+  if (error) {
+    redirect(`/app/products/${id}?error=${msg(error.message)}`);
+  }
+
+  revalidatePath('/app/products');
+  revalidatePath('/app/orders/new');
+  revalidatePath('/app/dashboard');
+  redirect(`/app/products?success=${msg('Product deleted successfully.')}`);
+}
+
 export async function createOrder(form: FormData) {
   const { supabase, business } = await getBusiness();
 
@@ -211,9 +235,6 @@ export async function createOrder(form: FormData) {
     redirect(`/app/orders/new?error=${msg(errorMessage)}`);
   }
 
-  // IMPORTANT: redirect() is outside the try/catch. Next.js implements
-  // redirect by throwing a special NEXT_REDIRECT signal, so catching it
-  // would incorrectly turn a successful order into an error message.
   revalidatePath('/app/orders');
   revalidatePath('/app/dashboard');
   redirect(`/app/orders?success=${msg('Order created successfully.')}`);
