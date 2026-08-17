@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { getBusiness, nextOrderNumber } from '@/lib/supabase/data';
 import type { Product } from '@/types';
 
-const val = (form: FormData, key: string) => String(form.get(key) || '');
+const val = (form: FormData, key: string) => String(form.get(key) || '').trim();
 const msg = (value: string) => encodeURIComponent(value);
 
 export async function saveCustomer(form: FormData) {
@@ -68,27 +68,44 @@ export async function saveProduct(form: FormData) {
 export async function createOrder(form: FormData) {
   const { supabase, business } = await getBusiness();
 
+  let createdCustomerId: string | null = null;
+  let createdOrderId: string | null = null;
+
   try {
-    let customerId = val(form, 'customer_id');
+    const existingCustomerId = val(form, 'customer_id');
+    const newCustomerName = val(form, 'customer_name');
+    const newCustomerPhone = val(form, 'customer_phone');
+    const productIds = form.getAll('product_id').map(String).map((value) => value.trim()).filter(Boolean);
+    const quantities = form.getAll('quantity').map((quantity) => Number(quantity));
 
-    if (!customerId) {
-      const { data: customer, error } = await supabase
-        .from('customers')
-        .insert({
-          business_id: business.id,
-          name: val(form, 'customer_name'),
-          phone: val(form, 'customer_phone'),
-          whatsapp_number: val(form, 'customer_phone'),
-        })
-        .select('id')
-        .single<{ id: string }>();
-
-      if (error || !customer) throw new Error(error?.message || 'Unable to create customer for this order.');
-      customerId = customer.id;
+    // Validate the order before creating any customer or database records.
+    if (!existingCustomerId && !newCustomerName) {
+      throw new Error('Enter a customer name or select an existing customer.');
     }
 
-    const productIds = form.getAll('product_id').map(String).filter(Boolean);
-    const quantities = form.getAll('quantity').map((quantity) => Number(quantity) || 1);
+    if (!productIds.length) {
+      throw new Error('Select at least one product to create an order.');
+    }
+
+    if (productIds.length !== quantities.length) {
+      throw new Error('Please select a product and quantity before creating the order.');
+    }
+
+    if (quantities.some((quantity) => !Number.isFinite(quantity) || quantity < 1)) {
+      throw new Error('Quantity must be at least 1.');
+    }
+
+    const deliveryFee = Number(val(form, 'delivery_fee') || 0);
+    const discount = Number(val(form, 'discount') || 0);
+
+    if (!Number.isFinite(deliveryFee) || deliveryFee < 0) {
+      throw new Error('Delivery fee cannot be negative.');
+    }
+
+    if (!Number.isFinite(discount) || discount < 0) {
+      throw new Error('Discount cannot be negative.');
+    }
+
     let subtotal = 0;
     const items: Array<{
       product_id: string;
@@ -106,19 +123,49 @@ export async function createOrder(form: FormData) {
         .eq('business_id', business.id)
         .single<Product>();
 
-      if (error || !product) throw new Error(error?.message || 'One or more selected products could not be found.');
+      if (error || !product) {
+        throw new Error(error?.message || 'One or more selected products could not be found.');
+      }
 
-      const quantity = quantities[index] || 1;
+      const quantity = quantities[index];
       const unitPrice = Number(product.price);
       const totalPrice = unitPrice * quantity;
       subtotal += totalPrice;
-      items.push({ product_id: product.id, product_name: product.name, quantity, unit_price: unitPrice, total_price: totalPrice });
+      items.push({
+        product_id: product.id,
+        product_name: product.name,
+        quantity,
+        unit_price: unitPrice,
+        total_price: totalPrice,
+      });
     }
 
-    if (!items.length) throw new Error('Add at least one product to create an order.');
+    if (discount > subtotal + deliveryFee) {
+      throw new Error('Discount cannot be greater than the order amount.');
+    }
 
-    const deliveryFee = Number(val(form, 'delivery_fee') || 0);
-    const discount = Number(val(form, 'discount') || 0);
+    let customerId = existingCustomerId;
+
+    if (!customerId) {
+      const { data: customer, error } = await supabase
+        .from('customers')
+        .insert({
+          business_id: business.id,
+          name: newCustomerName,
+          phone: newCustomerPhone,
+          whatsapp_number: newCustomerPhone,
+        })
+        .select('id')
+        .single<{ id: string }>();
+
+      if (error || !customer) {
+        throw new Error(error?.message || 'Unable to create customer for this order.');
+      }
+
+      customerId = customer.id;
+      createdCustomerId = customer.id;
+    }
+
     const total = subtotal + deliveryFee - discount;
     const { data: order, error } = await supabase
       .from('orders')
@@ -138,16 +185,40 @@ export async function createOrder(form: FormData) {
       .select('id')
       .single<{ id: string }>();
 
-    if (error || !order) throw new Error(error?.message || 'Unable to create order.');
+    if (error || !order) {
+      throw new Error(error?.message || 'Unable to create order.');
+    }
 
-    const { error: itemError } = await supabase.from('order_items').insert(items.map((item) => ({ ...item, order_id: order.id })));
-    if (itemError) throw new Error(itemError.message);
+    createdOrderId = order.id;
+
+    const { error: itemError } = await supabase
+      .from('order_items')
+      .insert(items.map((item) => ({ ...item, order_id: order.id })));
+
+    if (itemError) {
+      throw new Error(itemError.message);
+    }
 
     revalidatePath('/app/orders');
     revalidatePath('/app/dashboard');
+
+    // redirect() intentionally stays outside the catch block below because
+    // Next.js implements redirect by throwing a special NEXT_REDIRECT signal.
     redirect(`/app/orders/${order.id}?success=${msg('Order created successfully.')}`);
   } catch (error) {
-    redirect(`/app/orders/new?error=${msg(error instanceof Error ? error.message : 'Unable to create order. Please try again.')}`);
+    // Clean up records created during a failed order so a failed submission
+    // cannot leave behind an empty order or duplicate new customer.
+    if (createdOrderId) {
+      await supabase.from('order_items').delete().eq('order_id', createdOrderId);
+      await supabase.from('orders').delete().eq('id', createdOrderId).eq('business_id', business.id);
+    }
+
+    if (createdCustomerId) {
+      await supabase.from('customers').delete().eq('id', createdCustomerId).eq('business_id', business.id);
+    }
+
+    const errorMessage = error instanceof Error ? error.message : 'Unable to create order. Please try again.';
+    redirect(`/app/orders/new?error=${msg(errorMessage)}`);
   }
 }
 
