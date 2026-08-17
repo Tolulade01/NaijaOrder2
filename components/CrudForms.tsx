@@ -1,6 +1,6 @@
 'use client';
 
-import { saveCustomer, saveProduct } from '@/app/app/actions';
+import { deleteProduct, saveCustomer, saveProduct } from '@/app/app/actions';
 import { FormSubmitButton } from '@/components/FormSubmitButton';
 import type { Customer, Product } from '@/types';
 
@@ -43,7 +43,7 @@ export function CustomerForm({ c = {} }: { c?: CustomerFormData }) {
           <input className="input" name={field.name} required={field.required} defaultValue={inputValue(c[field.name])} />
         </label>
       ))}
-      <FormSubmitButton pendingLabel="Saving Customer...">Save Customer</FormSubmitButton>
+      <FormSubmitButton pendingLabel="Saving Customer...">{c.id ? 'Update Customer' : 'Save Customer'}</FormSubmitButton>
     </form>
   );
 }
@@ -68,7 +68,32 @@ export function ProductForm({ p = { active: true } }: { p?: ProductFormData }) {
       <label className="flex gap-2">
         <input name="active" type="checkbox" defaultChecked={p.active ?? true} /> Active
       </label>
-      <FormSubmitButton pendingLabel="Saving Product...">Save Product</FormSubmitButton>
+      <FormSubmitButton pendingLabel={p.id ? 'Updating Product...' : 'Saving Product...'}>
+        {p.id ? 'Update Product' : 'Save Product'}
+      </FormSubmitButton>
+    </form>
+  );
+}
+
+export function DeleteProductForm({ id }: { id: string }) {
+  return (
+    <form
+      action={deleteProduct}
+      className="card mt-4 space-y-3 border-red-200 bg-red-50 p-4"
+      onSubmit={(event) => {
+        if (!window.confirm('Delete this product? This action cannot be undone.')) {
+          event.preventDefault();
+        }
+      }}
+    >
+      <input type="hidden" name="id" value={id} />
+      <div>
+        <h2 className="font-bold text-red-800">Danger Zone</h2>
+        <p className="text-sm text-red-700">
+          Deleting a product is permanent. If it is already used in an order, the database may prevent deletion to protect order history.
+        </p>
+      </div>
+      <FormSubmitButton pendingLabel="Deleting Product...">Delete Product</FormSubmitButton>
     </form>
   );
 }
