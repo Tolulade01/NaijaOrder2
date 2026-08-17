@@ -1,6 +1,7 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getBusiness } from '@/lib/supabase/data';
-import { ProductForm } from '@/components/CrudForms';
+import { DeleteProductForm, ProductForm } from '@/components/CrudForms';
 import type { Product } from '@/types';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
@@ -18,9 +19,19 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   }
 
   return (
-    <>
-      <h1 className="mb-4 text-3xl font-black">Edit Product</h1>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <Link className="text-sm font-semibold text-gray-500 hover:text-gray-900" href="/app/products">
+            ← Back to Products
+          </Link>
+          <h1 className="mt-1 text-3xl font-black">Edit Product</h1>
+          <p className="text-gray-500">Update the product details or remove this product.</p>
+        </div>
+      </div>
+
       <ProductForm p={product} />
-    </>
+      <DeleteProductForm id={product.id} />
+    </div>
   );
 }
