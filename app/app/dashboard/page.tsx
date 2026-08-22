@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { getBusiness } from '@/lib/supabase/data';
 import { formatDate, formatNaira } from '@/lib/utils/format';
-import type { Customer, Order } from '@/types';
+import type { Customer, Order, Product } from '@/types';
 
 type RecentOrder = Order & {
   customers: Pick<Customer, 'name'> | null;
 };
 
 const ORDER_STATUSES = ['New', 'Awaiting Payment', 'Paid', 'Processing', 'Ready', 'Shipped', 'Delivered', 'Cancelled'] as const;
+const LOW_STOCK_THRESHOLD = 5;
 
 export default async function Dashboard() {
   const { supabase, business } = await getBusiness();
@@ -23,6 +24,7 @@ export default async function Dashboard() {
     todayOrdersResult,
     pendingOrdersResult,
     allOrderStatusesResult,
+    lowStockResult,
   ] = await Promise.all([
     supabase
       .from('orders')
@@ -59,12 +61,24 @@ export default async function Dashboard() {
       .from('orders')
       .select('status')
       .eq('business_id', business.id),
+
+    supabase
+      .from('products')
+      .select('id,name,stock_quantity,active')
+      .eq('business_id', business.id)
+      .eq('active', true)
+      .not('stock_quantity', 'is', null)
+      .lte('stock_quantity', LOW_STOCK_THRESHOLD)
+      .order('stock_quantity', { ascending: true })
+      .limit(8)
+      .returns<Pick<Product, 'id' | 'name' | 'stock_quantity' | 'active'>[]>(),
   ]);
 
   const orders = recentOrdersResult.data ?? [];
   const customerCount = customerCountResult.count ?? 0;
   const totalOrderCount = totalOrdersResult.count ?? 0;
   const pendingCount = pendingOrdersResult.count ?? 0;
+  const lowStockProducts = lowStockResult.data ?? [];
 
   const todaysSales = (todayOrdersResult.data ?? []).reduce(
     (sum, order) => sum + Number(order.total ?? 0),
@@ -121,6 +135,35 @@ export default async function Dashboard() {
           <p className="mt-4 text-xs text-slate-500">Customers in your database</p>
         </div>
       </div>
+
+      {lowStockProducts.length > 0 && (
+        <section className="card overflow-hidden border-amber-200">
+          <div className="flex flex-col gap-3 border-b border-amber-100 bg-amber-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-bold text-amber-950">Inventory needs attention</h2>
+              <p className="text-sm text-amber-800">These active products have {LOW_STOCK_THRESHOLD} or fewer items left.</p>
+            </div>
+            <Link href="/app/products" className="text-sm font-semibold text-amber-900 hover:underline">View products →</Link>
+          </div>
+          <div className="divide-y divide-amber-100">
+            {lowStockProducts.map((product) => {
+              const stock = Number(product.stock_quantity ?? 0);
+              const outOfStock = stock <= 0;
+              return (
+                <Link key={product.id} href={`/app/products/${product.id}`} className="flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-amber-50/60">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-slate-900">{product.name}</p>
+                    <p className="mt-1 text-xs text-slate-500">{outOfStock ? 'Out of stock' : 'Low stock'}</p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${outOfStock ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'}`}>
+                    {stock} left
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section>
         <div className="mb-4">
