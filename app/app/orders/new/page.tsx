@@ -29,9 +29,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<{ 
           <select className="input" name="customer_id">
             <option value="">Add new below</option>
             {customers.map((customer) => (
-              <option value={customer.id} key={customer.id}>
-                {customer.name}
-              </option>
+              <option value={customer.id} key={customer.id}>{customer.name}</option>
             ))}
           </select>
         </label>
@@ -42,11 +40,10 @@ export default async function Page({ searchParams }: { searchParams?: Promise<{ 
         <label className="label">
           Product
           <select className="input" name="product_id" required>
-            {products.map((product) => (
-              <option value={product.id} key={product.id}>
-                {product.name} — ₦{product.price}
-              </option>
-            ))}
+            {products.map((product) => {
+              const stock = product.stock_quantity == null ? 'Stock not tracked' : `${product.stock_quantity} in stock`;
+              return <option value={product.id} key={product.id}>{product.name} — ₦{product.price} · {stock}</option>;
+            })}
           </select>
         </label>
         <label className="label">
@@ -54,23 +51,17 @@ export default async function Page({ searchParams }: { searchParams?: Promise<{ 
           <input className="input" name="quantity" type="number" defaultValue="1" min="1" required />
         </label>
         <div className="grid gap-2 md:grid-cols-2">
-          <input className="input" name="delivery_fee" type="number" placeholder="Delivery fee" defaultValue="0" />
-          <input className="input" name="discount" type="number" placeholder="Discount" defaultValue="0" />
+          <input className="input" name="delivery_fee" type="number" min="0" placeholder="Delivery fee" defaultValue="0" />
+          <input className="input" name="discount" type="number" min="0" placeholder="Discount" defaultValue="0" />
         </div>
         <select className="input" name="payment_status">
-          {['Unpaid', 'Partial', 'Paid'].map((status) => (
-            <option key={status}>{status}</option>
-          ))}
+          {['Unpaid', 'Partial', 'Paid'].map((status) => <option key={status}>{status}</option>)}
         </select>
         <select className="input" name="payment_method">
-          {['Bank Transfer', 'Cash', 'POS', 'Other'].map((method) => (
-            <option key={method}>{method}</option>
-          ))}
+          {['Bank Transfer', 'Cash', 'POS', 'Other'].map((method) => <option key={method}>{method}</option>)}
         </select>
         <select className="input" name="status">
-          {['New', 'Awaiting Payment', 'Paid', 'Processing', 'Ready', 'Shipped', 'Delivered', 'Cancelled'].map((status) => (
-            <option key={status}>{status}</option>
-          ))}
+          {['New', 'Awaiting Payment', 'Paid', 'Processing', 'Ready', 'Shipped', 'Delivered', 'Cancelled'].map((status) => <option key={status}>{status}</option>)}
         </select>
         <textarea className="input" name="notes" placeholder="Notes" />
         <FormSubmitButton pendingLabel="Creating Order...">Create Order</FormSubmitButton>
