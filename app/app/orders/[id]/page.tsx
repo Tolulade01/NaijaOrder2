@@ -32,8 +32,14 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     orderMessage(
       order.customers.name,
       order.order_number,
+      formatNaira(Number(order.subtotal)),
+      formatNaira(Number(order.delivery_fee)),
+      formatNaira(Number(order.discount)),
       formatNaira(Number(order.total)),
       order.payment_status,
+      order.payment_method,
+      order.status,
+      items.map((item) => ({ product_name: item.product_name, quantity: item.quantity, total_price: item.total_price })),
     ),
   );
 
