@@ -1,6 +1,7 @@
 import { getBusiness } from '@/lib/supabase/data';
 import { createOrder } from '../../actions';
 import { FormSubmitButton } from '@/components/FormSubmitButton';
+import OrderLineItems, { CustomerSelector } from '@/components/OrderLineItems';
 import type { Customer, Product } from '@/types';
 
 export default async function Page({ searchParams }: { searchParams?: Promise<{ error?: string }> }) {
@@ -25,43 +26,9 @@ export default async function Page({ searchParams }: { searchParams?: Promise<{ 
       <form action={createOrder} className="card space-y-4 p-4">
         <h1 className="text-3xl font-black">New Order</h1>
 
-        <label className="label">
-          Existing customer
-          <select className="input" name="customer_id">
-            <option value="">Add new below</option>
-            {customers.map((customer) => (
-              <option value={customer.id} key={customer.id}>
-                {customer.name}{customer.phone ? ` — ${customer.phone}` : ''}
-              </option>
-            ))}
-          </select>
-        </label>
+        <CustomerSelector customers={customers} />
 
-        <div className="grid gap-2 md:grid-cols-2">
-          <label className="label">
-            New customer name
-            <input className="input" name="customer_name" placeholder="Customer name" />
-          </label>
-          <label className="label">
-            New customer phone
-            <input className="input" name="customer_phone" placeholder="Phone number" />
-          </label>
-        </div>
-
-        <label className="label">
-          Product
-          <select className="input" name="product_id" required>
-            {products.map((product) => {
-              const stock = product.stock_quantity == null ? 'Stock not tracked' : `${product.stock_quantity} in stock`;
-              return <option value={product.id} key={product.id}>{product.name} — ₦{product.price} · {stock}</option>;
-            })}
-          </select>
-        </label>
-
-        <label className="label">
-          Quantity
-          <input className="input" name="quantity" type="number" defaultValue="1" min="1" required />
-        </label>
+        <OrderLineItems products={products} />
 
         <div className="grid gap-2 md:grid-cols-2">
           <label className="label">
