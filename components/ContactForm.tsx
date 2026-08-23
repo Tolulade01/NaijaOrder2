@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 
-const CONTACT_EMAIL = 'ultrarevisions@gmail.com';
+const CONTACT_EMAIL = 'help@naijaorder.com';
 
 export default function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
