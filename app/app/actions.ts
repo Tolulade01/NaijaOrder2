@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { getBusiness, nextOrderNumber } from '@/lib/supabase/data';
+import { getBusiness, getMonthlyOrderUsage, nextOrderNumber } from '@/lib/supabase/data';
 import type { Product, OrderItem } from '@/types';
 
 const val = (form: FormData, key: string) => String(form.get(key) || '').trim();
@@ -50,12 +50,7 @@ export async function deleteProduct(form: FormData) {
   redirect(`/app/products?success=${msg('Product deleted successfully.')}`);
 }
 
-async function changeProductStock(
-  supabase: Awaited<ReturnType<typeof getBusiness>>['supabase'],
-  businessId: string,
-  productId: string,
-  delta: number,
-) {
+async function changeProductStock(supabase: Awaited<ReturnType<typeof getBusiness>>['supabase'], businessId: string, productId: string, delta: number) {
   const { data: product, error } = await supabase.from('products').select('id,name,stock_quantity').eq('id', productId).eq('business_id', businessId).single<Pick<Product, 'id' | 'name' | 'stock_quantity'>>();
   if (error || !product) throw new Error(error?.message || 'Product not found while updating stock.');
   const current = product.stock_quantity == null ? null : Number(product.stock_quantity);
@@ -66,12 +61,7 @@ async function changeProductStock(
   if (updateError) throw new Error(updateError.message);
 }
 
-async function adjustOrderStock(
-  supabase: Awaited<ReturnType<typeof getBusiness>>['supabase'],
-  businessId: string,
-  items: Array<Pick<OrderItem, 'product_id' | 'quantity'>>,
-  direction: 'decrease' | 'increase',
-) {
+async function adjustOrderStock(supabase: Awaited<ReturnType<typeof getBusiness>>['supabase'], businessId: string, items: Array<Pick<OrderItem, 'product_id' | 'quantity'>>, direction: 'decrease' | 'increase') {
   const changed: Array<{ productId: string; quantity: number }> = [];
   const sign = direction === 'decrease' ? -1 : 1;
   try {
@@ -88,6 +78,12 @@ async function adjustOrderStock(
 
 export async function createOrder(form: FormData) {
   const { supabase, business } = await getBusiness();
+
+  const usage = await getMonthlyOrderUsage(supabase, business.id, business.plan ?? 'free');
+  if (usage.isAtLimit) {
+    redirect(`/app/upgrade?reason=order-limit&used=${usage.used}`);
+  }
+
   let createdCustomerId: string | null = null;
   let createdOrderId: string | null = null;
   let stockAdjusted = false;
@@ -173,7 +169,6 @@ export async function updateOrder(form: FormData) {
     const { data: items } = await supabase.from('order_items').select('product_id,quantity').eq('order_id', id);
     if (current.status !== 'Cancelled' && nextStatus === 'Cancelled' && items?.length) await adjustOrderStock(supabase, business.id, items, 'increase');
     if (current.status === 'Cancelled' && nextStatus !== 'Cancelled' && items?.length) await adjustOrderStock(supabase, business.id, items, 'decrease');
-
     const { data, error } = await supabase.from('orders').update({ status: nextStatus, payment_status: val(form, 'payment_status'), payment_method: val(form, 'payment_method'), notes: val(form, 'notes') }).eq('id', id).eq('business_id', business.id).select('id').maybeSingle<{ id: string }>();
     if (error || !data) throw new Error(error?.message || 'Order could not be updated. Please try again.');
   } catch (error) {
