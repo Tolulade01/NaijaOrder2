@@ -1,6 +1,7 @@
 export type OrderStatus = 'New' | 'Awaiting Payment' | 'Paid' | 'Processing' | 'Ready' | 'Shipped' | 'Delivered' | 'Cancelled';
 export type PaymentStatus = 'Unpaid' | 'Partial' | 'Paid';
 export type PaymentMethod = 'Bank Transfer' | 'Cash' | 'POS' | 'Other';
+export type BusinessPlan = 'free' | 'pro' | 'business';
 
 export type Profile = {
   id: string;
@@ -24,6 +25,8 @@ export type Business = {
   address?: string | null;
   logo_url?: string | null;
   currency: string;
+  plan: BusinessPlan;
+  plan_started_at: string;
   created_at: string;
   updated_at: string;
 };
