@@ -13,6 +13,17 @@ function safeMessage(value: string) {
   return encodeURIComponent(value.slice(0, 180));
 }
 
+function getPublicSiteUrl() {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, '');
+
+  // Never send Flutterwave back to a local development URL from production.
+  if (configured && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configured)) {
+    return configured;
+  }
+
+  return 'https://naija-order2.vercel.app';
+}
+
 export async function POST(request: Request) {
   const { business, user } = await getBusiness();
   const form = await request.formData();
@@ -25,7 +36,7 @@ export async function POST(request: Request) {
   }
 
   const secretKey = process.env.FLW_SECRET_KEY;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://naija-order2.vercel.app';
+  const siteUrl = getPublicSiteUrl();
   if (!secretKey) redirect(`/app/upgrade?error=${safeMessage('Flutterwave is not configured yet. Please try again later.')}`);
 
   const txRef = `NAIJAORDER-${business.id.slice(0, 8)}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
