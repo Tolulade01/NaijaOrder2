@@ -19,7 +19,7 @@ const plans = [
   },
   {
     name: 'Pro',
-    price: '₦2,500',
+    price: '₦3,500',
     period: 'per month',
     description: 'For growing businesses that receive orders regularly.',
     badge: 'Most popular',
@@ -27,7 +27,7 @@ const plans = [
     cta: 'Upgrade to Pro',
     href: '/login',
     features: [
-      'Up to 250 orders per month',
+      'Up to 100 orders per month',
       'Unlimited customers',
       'Unlimited products',
       'Full order management',
@@ -37,10 +37,10 @@ const plans = [
   },
   {
     name: 'Business',
-    price: '₦5,000',
+    price: '₦7,000',
     period: 'per month',
     description: 'For busy businesses that need room to grow without an order limit.',
-    badge: 'For growing teams',
+    badge: 'Unlimited',
     featured: false,
     cta: 'Choose Business',
     href: '/login',
@@ -63,7 +63,7 @@ export default function Page() {
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-amber-700">Simple pricing</p>
           <h1 className="mt-4 text-4xl font-black tracking-tight text-emerald-950 sm:text-6xl">Start free. Upgrade when you grow.</h1>
           <p className="mt-6 text-lg leading-8 text-slate-700 sm:text-xl">
-            Try NaijaOrder with up to 25 orders every month. When your business grows, upgrade to keep taking more orders.
+            Try NaijaOrder with up to 25 orders every month. When your business grows, upgrade to 100 orders with Pro or unlimited orders with Business.
           </p>
         </div>
 
@@ -117,9 +117,9 @@ export default function Page() {
         </div>
 
         <div className="mx-auto mt-12 max-w-3xl rounded-3xl bg-emerald-950 p-7 text-center text-white sm:p-9">
-          <h2 className="text-2xl font-black sm:text-3xl">What happens after 25 orders?</h2>
+          <h2 className="text-2xl font-black sm:text-3xl">Choose the plan that fits your order volume</h2>
           <p className="mt-3 leading-7 text-emerald-50/80">
-            Your existing customers, products and orders remain safe. Once you reach the Free plan limit, new orders are paused until you upgrade.
+            Free includes 25 orders every month. Pro gives you 100 orders for ₦3,500/month. Business gives you unlimited orders for ₦7,000/month.
           </p>
         </div>
 
