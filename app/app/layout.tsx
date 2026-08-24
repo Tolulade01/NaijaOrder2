@@ -9,7 +9,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <Suspense fallback={null}>
         <ActionToast />
       </Suspense>
-      <main className="bottom-safe min-h-dvh p-4 md:ml-64 md:p-8">{children}</main>
+      <main className="bottom-safe min-h-dvh p-4 pt-20 md:ml-64 md:p-8">{children}</main>
     </div>
   );
 }
