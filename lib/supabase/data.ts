@@ -4,7 +4,7 @@ import { createClient } from './server';
 import type { Business, BusinessPlan } from '@/types';
 
 export const FREE_ORDER_LIMIT = 25;
-export const PRO_ORDER_LIMIT = 250;
+export const PRO_ORDER_LIMIT = 100;
 
 export async function getBusiness() {
   const supabase = await createClient();
@@ -12,9 +12,7 @@ export async function getBusiness() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect('/login');
-  }
+  if (!user) redirect('/login');
 
   const { data: business, error } = await supabase
     .from('businesses')
@@ -22,9 +20,7 @@ export async function getBusiness() {
     .eq('owner_id', user.id)
     .single<Business>();
 
-  if (error || !business) {
-    redirect('/app/settings');
-  }
+  if (error || !business) redirect('/app/settings');
 
   return { supabase, user, business };
 }
