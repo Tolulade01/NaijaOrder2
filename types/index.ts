@@ -27,6 +27,7 @@ export type Business = {
   currency: string;
   plan: BusinessPlan;
   plan_started_at: string;
+  plan_expires_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -86,4 +87,17 @@ export type OrderItem = {
   quantity: number;
   unit_price: number;
   total_price: number;
+};
+
+export type BillingPayment = {
+  id: string;
+  business_id: string;
+  tx_ref: string;
+  plan: 'pro' | 'business';
+  amount: number;
+  currency: string;
+  status: 'pending' | 'successful' | 'failed' | 'cancelled';
+  flutterwave_transaction_id?: number | null;
+  created_at: string;
+  updated_at: string;
 };

@@ -6,6 +6,12 @@ import type { Business, BusinessPlan } from '@/types';
 export const FREE_ORDER_LIMIT = 25;
 export const PRO_ORDER_LIMIT = 100;
 
+function effectivePlan(business: Business): BusinessPlan {
+  if (business.plan === 'free') return 'free';
+  if (!business.plan_expires_at) return business.plan;
+  return new Date(business.plan_expires_at) > new Date() ? business.plan : 'free';
+}
+
 export async function getBusiness() {
   const supabase = await createClient();
   const {
@@ -22,7 +28,7 @@ export async function getBusiness() {
 
   if (error || !business) redirect('/app/settings');
 
-  return { supabase, user, business };
+  return { supabase, user, business: { ...business, plan: effectivePlan(business) } };
 }
 
 export async function getMonthlyOrderUsage(
