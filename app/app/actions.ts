@@ -80,9 +80,7 @@ export async function createOrder(form: FormData) {
   const { supabase, business } = await getBusiness();
 
   const usage = await getMonthlyOrderUsage(supabase, business.id, business.plan ?? 'free');
-  if (usage.isAtLimit) {
-    redirect(`/app/upgrade?reason=order-limit&used=${usage.used}`);
-  }
+  if (usage.isAtLimit) redirect(`/app/upgrade?reason=order-limit&used=${usage.used}`);
 
   let createdCustomerId: string | null = null;
   let createdOrderId: string | null = null;
@@ -127,8 +125,27 @@ export async function createOrder(form: FormData) {
 
     const status = val(form, 'status') || 'New';
     const total = subtotal + deliveryFee - discount;
-    const { data: order, error } = await supabase.from('orders').insert({ business_id: business.id, customer_id: customerId, order_number: await nextOrderNumber(supabase, business.id), status, subtotal, delivery_fee: deliveryFee, discount, total, payment_status: val(form, 'payment_status') || 'Unpaid', payment_method: val(form, 'payment_method') || 'Bank Transfer', notes: val(form, 'notes') }).select('id').single<{ id: string }>();
-    if (error || !order) throw new Error(error?.message || 'Unable to create order.');
+    let order: { id: string } | null = null;
+    let orderError: { message: string; code?: string } | null = null;
+
+    // The old count-based order number could collide after an order was deleted or
+    // when two orders were created at nearly the same time. Retry with the next
+    // candidate when the database unique constraint rejects a number.
+    let candidate = await nextOrderNumber(supabase, business.id);
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const result = await supabase.from('orders').insert({ business_id: business.id, customer_id: customerId, order_number: candidate, status, subtotal, delivery_fee: deliveryFee, discount, total, payment_status: val(form, 'payment_status') || 'Unpaid', payment_method: val(form, 'payment_method') || 'Bank Transfer', notes: val(form, 'notes') }).select('id').single<{ id: string }>();
+      if (!result.error && result.data) {
+        order = result.data;
+        orderError = null;
+        break;
+      }
+      orderError = result.error;
+      if (result.error?.code !== '23505' && !result.error?.message?.includes('orders_business_id_order_number_key')) break;
+      const numericPart = Number(candidate.replace('ORD-', ''));
+      candidate = `ORD-${(Number.isFinite(numericPart) ? numericPart : 1000) + 1}`;
+    }
+
+    if (orderError || !order) throw new Error(orderError?.message || 'Unable to create order.');
     createdOrderId = order.id;
 
     const { error: itemError } = await supabase.from('order_items').insert(items.map((item) => ({ ...item, order_id: order.id })));
