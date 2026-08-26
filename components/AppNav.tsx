@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Package, ShoppingCart, Users, MoreHorizontal, LogOut, Menu, X, HelpCircle, Settings } from 'lucide-react';
+import { Home, Package, ShoppingCart, Users, MoreHorizontal, LogOut, Menu, X, HelpCircle, Settings, CreditCard } from 'lucide-react';
 import { useState } from 'react';
 import { Logo } from './Logo';
 import { createClient } from '@/lib/supabase/client';
@@ -35,6 +35,9 @@ export function AppNav() {
               <Icon size={20} />{label === 'More' ? 'Settings' : label}
             </Link>
           ))}
+          <Link className={`flex gap-3 rounded-xl px-3 py-2 ${path.startsWith('/app/upgrade') ? 'bg-emerald-900 text-white' : 'hover:bg-amber-50'}`} href="/app/upgrade">
+            <CreditCard size={20} />Plan & Billing
+          </Link>
           <a className="flex gap-3 rounded-xl px-3 py-2" href="mailto:help@naijaorder.com"><HelpCircle size={20} />Help</a>
           <button onClick={logout} className="flex w-full gap-3 rounded-xl px-3 py-2 text-left"><LogOut size={20} />Logout</button>
         </nav>
@@ -43,13 +46,7 @@ export function AppNav() {
       <header className="fixed left-0 right-0 top-0 z-40 border-b bg-white/95 px-4 py-3 shadow-sm backdrop-blur print:hidden md:hidden">
         <div className="flex items-center justify-between">
           <Logo />
-          <button
-            type="button"
-            className="grid h-10 w-10 place-items-center rounded-xl border border-gray-200"
-            onClick={() => setOpen((value) => !value)}
-            aria-label={open ? 'Close account menu' : 'Open account menu'}
-            aria-expanded={open}
-          >
+          <button type="button" className="grid h-10 w-10 place-items-center rounded-xl border border-gray-200" onClick={() => setOpen((value) => !value)} aria-label={open ? 'Close account menu' : 'Open account menu'} aria-expanded={open}>
             {open ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
@@ -57,6 +54,9 @@ export function AppNav() {
           <div className="mt-3 space-y-1 border-t pt-3">
             <Link className="flex items-center gap-3 rounded-xl px-3 py-3 font-medium hover:bg-amber-50" href="/app/settings" onClick={() => setOpen(false)}>
               <Settings size={19} /> Settings
+            </Link>
+            <Link className="flex items-center gap-3 rounded-xl px-3 py-3 font-medium hover:bg-amber-50" href="/app/upgrade" onClick={() => setOpen(false)}>
+              <CreditCard size={19} /> Plan & Billing
             </Link>
             <a className="flex items-center gap-3 rounded-xl px-3 py-3 font-medium hover:bg-amber-50" href="mailto:help@naijaorder.com" onClick={() => setOpen(false)}>
               <HelpCircle size={19} /> Help & Support
