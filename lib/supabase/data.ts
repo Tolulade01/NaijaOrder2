@@ -36,20 +36,22 @@ export async function getMonthlyOrderUsage(
   businessId: string,
   plan: BusinessPlan = 'free',
 ) {
-  const start = new Date();
-  start.setUTCDate(1);
-  start.setUTCHours(0, 0, 0, 0);
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+  const month = monthStart.toISOString().slice(0, 10);
 
-  const { count, error } = await supabase
-    .from('orders')
-    .select('id', { count: 'exact', head: true })
+  const { data, error } = await supabase
+    .from('monthly_order_usage')
+    .select('orders_created')
     .eq('business_id', businessId)
-    .gte('created_at', start.toISOString());
+    .eq('month_start', month)
+    .maybeSingle<{ orders_created: number }>();
 
   if (error) throw new Error(error.message);
 
   const limit = plan === 'free' ? FREE_ORDER_LIMIT : plan === 'pro' ? PRO_ORDER_LIMIT : null;
-  const used = count ?? 0;
+  const used = Number(data?.orders_created ?? 0);
 
   return {
     used,
