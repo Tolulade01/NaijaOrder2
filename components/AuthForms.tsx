@@ -38,22 +38,12 @@ export function LoginForm() {
         <h1 className="text-3xl font-black">Login</h1>
         <Link href="/" className="text-sm font-semibold text-emerald-900 hover:underline">Back to home</Link>
       </div>
-      <label className="label">
-        Email
-        <input className="input" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
-      </label>
-      <label className="label">
-        Password
-        <input className="input" type="password" required value={password} onChange={(event) => setPassword(event.target.value)} />
-      </label>
-      <div className="flex justify-end">
-        <Link href="/forgot-password" className="text-sm font-semibold text-emerald-900 hover:underline">Forgot password?</Link>
-      </div>
+      <label className="label">Email<input className="input" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
+      <label className="label">Password<input className="input" type="password" required value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+      <div className="flex justify-end"><Link href="/forgot-password" className="text-sm font-semibold text-emerald-900 hover:underline">Forgot password?</Link></div>
       <button className="btn btn-primary w-full" disabled={loading}>{loading ? 'Logging in…' : 'Login'}</button>
       {msg && <p className="text-sm text-red-600">{msg}</p>}
-      <p className="text-center text-sm text-gray-600">
-        Don't have an account? <Link href="/signup" className="font-bold text-emerald-900 hover:underline">Sign up</Link>
-      </p>
+      <p className="text-center text-sm text-gray-600">Don't have an account? <Link href="/signup" className="font-bold text-emerald-900 hover:underline">Sign up</Link></p>
     </form>
   );
 }
@@ -69,16 +59,8 @@ export function SignupForm() {
     setLoading(true);
     setMsg('');
     const supabase = createClient();
-    const { data, error } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: { data: { full_name: form.full_name, business_name: form.business_name } },
-    });
-    if (error) {
-      setMsg(error.message);
-      setLoading(false);
-      return;
-    }
+    const { data, error } = await supabase.auth.signUp({ email: form.email, password: form.password, options: { data: { full_name: form.full_name, business_name: form.business_name } } });
+    if (error) { setMsg(error.message); setLoading(false); return; }
     if (data.user) {
       await supabase.from('profiles').upsert({ user_id: data.user.id, full_name: form.full_name }, { onConflict: 'user_id' });
       await supabase.from('businesses').insert({ owner_id: data.user.id, name: form.business_name, email: form.email, currency: 'NGN' });
@@ -88,27 +70,11 @@ export function SignupForm() {
 
   return (
     <form onSubmit={submit} className="card mx-auto max-w-md space-y-4 p-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-3xl font-black">Start Free</h1>
-        <Link href="/" className="text-sm font-semibold text-emerald-900 hover:underline">Back to home</Link>
-      </div>
-      {signupFields.map((field) => (
-        <label className="label" key={field.name}>
-          {field.label}
-          <input
-            className="input"
-            type={field.type}
-            required
-            value={form[field.name]}
-            onChange={(event) => setForm({ ...form, [field.name]: event.target.value })}
-          />
-        </label>
-      ))}
+      <div className="flex items-center justify-between gap-3"><h1 className="text-3xl font-black">Start Free</h1><Link href="/" className="text-sm font-semibold text-emerald-900 hover:underline">Back to home</Link></div>
+      {signupFields.map((field) => <label className="label" key={field.name}>{field.label}<input className="input" type={field.type} required value={form[field.name]} onChange={(event) => setForm({ ...form, [field.name]: event.target.value })} /></label>)}
       <button className="btn btn-primary w-full" disabled={loading}>{loading ? 'Creating account…' : 'Create account'}</button>
       {msg && <p className="text-sm text-red-600">{msg}</p>}
-      <p className="text-center text-sm text-gray-600">
-        Already have an account? <Link href="/login" className="font-bold text-emerald-900 hover:underline">Log in</Link>
-      </p>
+      <p className="text-center text-sm text-gray-600">Already have an account? <Link href="/login" className="font-bold text-emerald-900 hover:underline">Log in</Link></p>
     </form>
   );
 }
@@ -122,26 +88,19 @@ export function ForgotForm() {
     event.preventDefault();
     if (loading) return;
     setLoading(true);
-    const { error } = await createClient().auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}/login` });
+    setMsg('');
+    const { error } = await createClient().auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}/reset-password` });
     setMsg(error ? error.message : 'Check your email for reset instructions.');
     setLoading(false);
   }
 
   return (
     <form onSubmit={submit} className="card mx-auto max-w-md space-y-4 p-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-3xl font-black">Reset password</h1>
-        <Link href="/" className="text-sm font-semibold text-emerald-900 hover:underline">Back to home</Link>
-      </div>
-      <label className="label">
-        Email
-        <input className="input" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
-      </label>
+      <div className="flex items-center justify-between gap-3"><h1 className="text-3xl font-black">Reset password</h1><Link href="/" className="text-sm font-semibold text-emerald-900 hover:underline">Back to home</Link></div>
+      <label className="label">Email<input className="input" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
       <button className="btn btn-primary w-full" disabled={loading}>{loading ? 'Sending…' : 'Send reset link'}</button>
       {msg && <p className="text-sm text-gray-600">{msg}</p>}
-      <p className="text-center text-sm text-gray-600">
-        Remembered your password? <Link href="/login" className="font-bold text-emerald-900 hover:underline">Log in</Link>
-      </p>
+      <p className="text-center text-sm text-gray-600">Remembered your password? <Link href="/login" className="font-bold text-emerald-900 hover:underline">Log in</Link></p>
     </form>
   );
 }
