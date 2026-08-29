@@ -36,16 +36,21 @@ export async function getMonthlyOrderUsage(
   businessId: string,
   plan: BusinessPlan = 'free',
 ) {
-  const monthStart = new Date();
-  monthStart.setUTCDate(1);
-  monthStart.setUTCHours(0, 0, 0, 0);
-  const month = monthStart.toISOString().slice(0, 10);
+  // NaijaOrder uses the Nigeria calendar month (Africa/Lagos) for monthly quotas.
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Lagos',
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(new Date());
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const monthKey = `${year}-${month}-01`;
 
   const { data, error } = await supabase
     .from('monthly_order_usage')
     .select('orders_created')
     .eq('business_id', businessId)
-    .eq('month_start', month)
+    .eq('month_start', monthKey)
     .maybeSingle<{ orders_created: number }>();
 
   if (error) throw new Error(error.message);
