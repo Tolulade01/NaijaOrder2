@@ -89,7 +89,12 @@ export function ForgotForm() {
     if (loading) return;
     setLoading(true);
     setMsg('');
-    const { error } = await createClient().auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}/reset-password` });
+
+    // Send the recovery code through our server callback first. The callback
+    // exchanges the one-time PKCE code and stores the Supabase session in the
+    // browser before redirecting to the reset form.
+    const redirectTo = `${location.origin}/auth/callback?next=/reset-password`;
+    const { error } = await createClient().auth.resetPasswordForEmail(email, { redirectTo });
     setMsg(error ? error.message : 'Check your email for reset instructions.');
     setLoading(false);
   }
